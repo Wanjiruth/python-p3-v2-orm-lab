@@ -9,7 +9,7 @@ class Review:
     all = {}
 
     def __init__(self, year, summary, employee_id, id=None):
-        self.id = id
+        self.id = None
         self.year = year
         self.summary = summary
         self.employee_id = employee_id
@@ -75,8 +75,47 @@ class Review:
         delete the dictionary entry, and reassign id attribute"""
         pass
 
+    
+    @classmethod
+    def create(cls, year, summary, employee_id):
+        review = cls(year=year, summary=summary, employee_id=employee_id)
+        review.save()
+        return review
+    def save(self):
+        if self.id is None:
+            CURSOR.execute(
+                'INSERT INTO reviews (year, summary, employee_id) VALUES (?, ?, ?)',
+                (self.year, self.summary, self.employee_id)
+            )
+            self.id = CURSOR.lastrowid
+        else:
+            CURSOR.execute(
+                'UPDATE reviews SET year = ?, summary = ?, employee_id = ? WHERE id = ?',
+                (self.year, self.summary, self.employee_id, self.id)
+            )
+        CONN.commit()
+    @classmethod
+    def instance_from_db(cls, row):
+        if row:
+            review = cls(year=row[1], summary=row[2], employee_id=row[3])
+            review.id = row[0]
+            return review
+        else:
+            return None
+    @classmethod
+    def find_by_id(cls, id):
+        CURSOR.execute('SELECT * FROM reviews WHERE id = ?', (id,))
+        row = CURSOR.fetchone()
+        if row:
+            return cls.instance_from_db(row)
+        else:
+            return None
     @classmethod
     def get_all(cls):
-        """Return a list containing one Review instance per table row"""
-        pass
-
+        reviews = []
+        CURSOR.execute('SELECT * FROM reviews')
+        rows = CURSOR.fetchall()
+        for row in rows:
+            reviews.append(cls.instance_from_db(row))
+        return reviews if reviews else []    
+    
